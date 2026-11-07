@@ -12,10 +12,11 @@ const IMAGE_TYPES = ['image/jpeg', 'image/png']
 const schema = z.object({
   name: z.string().min(3, 'El nombre necesita al menos 3 caracteres'),
   cuisine: z.string().min(3, 'La cocina necesita al menos 3 caracteres'),
-  prepTimeMinutes: z.coerce
-    .number({ message: 'Escriba un número' })
-    .int('Debe ser un entero')
-    .positive('Debe ser mayor que 0'),
+  prepTimeMinutes: z.string()
+    .min(1, 'Escriba un número')
+    .refine((v) => !isNaN(Number(v)) && Number(v) > 0 && Number.isInteger(Number(v)), {
+      message: 'Debe ser un entero mayor que 0',
+    }),
 })
 type FormData = z.infer<typeof schema>
 
@@ -33,7 +34,6 @@ function RecipeForm({ onClose }: Props) {
     resolver: zodResolver(schema),
   })
 
-  // Libera URL previa al cambiar
   useEffect(() => {
     return () => {
       if (preview) URL.revokeObjectURL(preview)
@@ -63,7 +63,7 @@ function RecipeForm({ onClose }: Props) {
     const body = new FormData()
     body.append('name', values.name)
     body.append('cuisine', values.cuisine)
-    body.append('prepTimeMinutes', String(values.prepTimeMinutes))
+    body.append('prepTimeMinutes', values.prepTimeMinutes)
     if (file) body.append('image', file)
     create.mutate(body, { onSuccess: onClose })
   }
