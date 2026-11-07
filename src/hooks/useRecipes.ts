@@ -1,38 +1,58 @@
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { keepPreviousData } from '@tanstack/react-query'
 import { recipeService } from '../services/recipeService'
+import { toast } from 'sonner'
 import type { Recipe, ListFilters, RecipesResponse } from '../types'
 
-// TODO 2.2 (Listado): useRecipes(filters) con useQuery. La queryKey debe incluir los filtros y la
-// consulta no debe parpadear al cambiar de página (placeholderData: keepPreviousData).
+function getErrorMessage(error: unknown): string {
+  if (error instanceof Error) return error.message
+  return 'Error desconocido'
+}
+
+// TODO 2.2: useRecipes con useQuery
 export function useRecipes(filters: ListFilters) {
-  void recipeService
-  void filters
-  return { data: undefined as RecipesResponse | undefined, isLoading: false, isError: false, error: null as unknown, refetch: () => {}, isFetching: false }
+  return useQuery<RecipesResponse, unknown>({
+    queryKey: ['recipes', filters],
+    queryFn: () => recipeService.list(filters),
+    placeholderData: keepPreviousData,
+  })
 }
 
-// TODO 3.1 (Detalle): useRecipe(id) con useQuery; sin reintentos (retry: false) para que un 404 se muestre de inmediato.
+// TODO 3.1: useRecipe con useQuery sin reintentos
 export function useRecipe(id: number) {
-  void id
-  return { data: undefined as Recipe | undefined, isLoading: false, isError: false, error: null as unknown }
+  return useQuery<Recipe, unknown>({
+    queryKey: ['recipe', id],
+    queryFn: () => recipeService.getById(id),
+    retry: false,
+  })
 }
 
-// TODO 4.3 (Crear): useCreateRecipe() con useMutation. Al terminar: toast de éxito y invalidar la lista.
-// Si falla: toast de error con getErrorMessage.
+// TODO 4.3: useCreateRecipe con useMutation
 export function useCreateRecipe() {
-  return {
-    mutate: (body: FormData, options?: { onSuccess?: () => void }) => {
-      void body
-      void options
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (body: FormData) => recipeService.create(body),
+    onSuccess: () => {
+      toast.success('Receta creada correctamente')
+      queryClient.invalidateQueries({ queryKey: ['recipes'] })
     },
-    isPending: false,
-  }
+    onError: (error) => {
+      toast.error(getErrorMessage(error))
+    },
+  })
 }
 
-// TODO 4.4 (Eliminar): useDeleteRecipe() con useMutation. Mismo patrón que crear.
+// TODO 4.4: useDeleteRecipe con useMutation
 export function useDeleteRecipe() {
-  return {
-    mutate: (id: number) => {
-      void id
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (id: number) => recipeService.remove(id),
+    onSuccess: () => {
+      toast.success('Receta eliminada correctamente')
+      queryClient.invalidateQueries({ queryKey: ['recipes'] })
     },
-    isPending: false,
-  }
+    onError: (error) => {
+      toast.error(getErrorMessage(error))
+    },
+  })
 }

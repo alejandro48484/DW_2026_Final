@@ -10,13 +10,10 @@ import { PAGE_SIZE } from '../services/recipeService'
 import { useAuthStore } from '../store/authStore'
 import { getErrorMessage } from '../utils/errorHandler'
 
-// TODO 2.3 (Listado): la página y la búsqueda deben vivir en la URL (?page=2&q=texto) con useSearchParams.
-//  - parsePage: devuelva un entero >= 1; cualquier valor inválido (page=abc, page=-3) es la página 1.
-//  - Al buscar (botón Buscar o Enter) escriba q en la URL y vuelva a la página 1; al paginar cambie solo page.
-//  - Al recargar la página o compartir el enlace debe verse la misma lista.
+// TODO 2.3: parsePage devuelve entero >= 1
 function parsePage(raw: string | null): number {
-  void raw
-  return 1
+  const n = parseInt(raw ?? '', 10)
+  return n >= 1 ? n : 1
 }
 
 function RecipesPage() {
@@ -29,33 +26,28 @@ function RecipesPage() {
   const user = useAuthStore((s) => s.user)
   const logout = useAuthStore((s) => s.logout)
 
-  // TODO 2.2: useRecipes({ page, q }) ya devuelve los datos cuando complete el hook.
   const { data, isLoading, isError, error, refetch, isFetching } = useRecipes({ page, q })
   const remove = useDeleteRecipe()
-  void refetch
   void isFetching
 
   const search = (event: React.FormEvent) => {
     event.preventDefault()
-    void setSearchParams
-    // TODO 2.3: actualice la URL con q=text y sin page.
+    setSearchParams({ q: text })
   }
 
   const changePage = (n: number) => {
-    void n
-    // TODO 2.3: actualice la URL con page=n conservando q.
+    setSearchParams({ q, page: String(n) })
   }
 
   const onDelete = (item: { id: number; name: string }) => {
-    // TODO 4.4 (Eliminar): pida confirmación con window.confirm y, si acepta, llame a remove.mutate(item.id).
-    void item
-    void remove
+    if (window.confirm(`¿Eliminar "${item.name}"?`)) {
+      remove.mutate(item.id)
+    }
   }
 
   const salir = () => {
-    // TODO 1.5 (Autenticación): cierre la sesión con logout() y vaya a /login con navigate.
-    void logout
-    void navigate
+    logout()
+    navigate('/login')
   }
 
   const totalPages = data ? Math.max(1, Math.ceil(data.total / PAGE_SIZE)) : 1
@@ -83,10 +75,11 @@ function RecipesPage() {
 
         {isLoading && <p className="mt-8 text-center text-slate-500" role="status">Cargando…</p>}
 
-        {/* TODO 5.2 (Errores): card de error con el mensaje (getErrorMessage) y un botón Reintentar que llame a refetch. */}
+        {/* TODO 5.2: card de error con botón Reintentar */}
         {isError && (
           <Alert variant="destructive" className="mt-6">
             <AlertDescription>{getErrorMessage(error)}</AlertDescription>
+            <Button variant="outline" className="mt-2" onClick={() => refetch()}>Reintentar</Button>
           </Alert>
         )}
 
@@ -97,8 +90,8 @@ function RecipesPage() {
         {data && data.recipes.length > 0 && (
           <>
             <p className="mt-4 text-sm text-slate-500">{data.total} resultados</p>
-            {/* TODO 6.1 (Interfaz): la cuadrícula debe tener 1 columna en móvil, 2 en tableta (sm) y 4 en escritorio (lg). */}
-            <div className="mt-2 grid gap-4">
+            {/* TODO 6.1: 1 col móvil, 2 tableta, 4 escritorio */}
+            <div className="mt-2 grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
               {data.recipes.map((item) => (
                 <RecipeCard key={item.id} item={item} onDelete={onDelete} />
               ))}
